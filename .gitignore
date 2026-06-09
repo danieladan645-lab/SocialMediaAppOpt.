@@ -1,0 +1,19 @@
+# Secrets — never commit
+backend/.env
+frontend/.env.local
+
+# Dependencies
+frontend/node_modules/
+backend/venv/
+backend/.venv/
+
+# Build output
+frontend/.next/
+backend/__pycache__/
+**/__pycache__/
+**/*.pyc
+**/*.pyo
+
+# OS
+.DS_Store
+Thumbs.db
