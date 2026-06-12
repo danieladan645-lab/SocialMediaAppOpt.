@@ -67,6 +67,8 @@ def profile_stats(handle: str):
 
 @app.get("/credits/balance")
 def credits_balance(user_id: str = Depends(get_user_id)):
+    if _is_admin(user_id):
+        return {"balance": 9999}
     balance = get_or_create_balance(user_id)
     return {"balance": balance}
 
