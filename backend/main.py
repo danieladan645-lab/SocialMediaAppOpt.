@@ -1,3 +1,4 @@
+import os
 import time
 
 from fastapi import FastAPI, HTTPException, Depends
@@ -13,6 +14,11 @@ from instagram_fetcher import fetch_profile
 from models import AuditData, CompareData
 from renderers.docx_renderer import build_docx
 from renderers.pptx_renderer import build_pptx
+
+
+def _is_admin(user_id: str) -> bool:
+    raw = os.getenv("ADMIN_USER_IDS", "")
+    return user_id in {uid.strip() for uid in raw.split(",") if uid.strip()}
 
 app = FastAPI(title="Brand Audit Engine", version="0.1.0")
 
@@ -76,9 +82,11 @@ def suggest_competitors_endpoint(req: SuggestRequest):
 
 @app.post("/audit/compare")
 def audit_compare(req: CompareRequest, user_id: str = Depends(get_user_id)):
-    balance = get_or_create_balance(user_id)
-    if balance <= 0:
-        raise HTTPException(status_code=402, detail="No credits remaining. Purchase more to continue.")
+    admin = _is_admin(user_id)
+    if not admin:
+        balance = get_or_create_balance(user_id)
+        if balance <= 0:
+            raise HTTPException(status_code=402, detail="No credits remaining. Purchase more to continue.")
     try:
         user_profile = fetch_profile(req.handle)
         time.sleep(2)
@@ -87,8 +95,12 @@ def audit_compare(req: CompareRequest, user_id: str = Depends(get_user_id)):
         comp_data = run_audit(req.competitor_handle, req.tier, req.self_archetype, profile_data=comp_profile, skip_fetch=True)
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Compare failed: {e}")
-    new_balance = deduct_credit(user_id)
-    save_audit(user_id, req.handle, req.tier, user_data.model_dump())
+    if not admin:
+        new_balance = deduct_credit(user_id)
+        save_audit(user_id, req.handle, req.tier, user_data.model_dump())
+    else:
+        new_balance = get_or_create_balance(user_id)
+        save_audit(user_id, req.handle, req.tier, user_data.model_dump())
     return JSONResponse(
         content=CompareData(user=user_data, competitor=comp_data).model_dump(),
         headers={"X-Credits-Remaining": str(new_balance)},
@@ -97,14 +109,19 @@ def audit_compare(req: CompareRequest, user_id: str = Depends(get_user_id)):
 
 @app.post("/audit/preview")
 def audit_preview(req: AuditRequest, user_id: str = Depends(get_user_id)):
-    balance = get_or_create_balance(user_id)
-    if balance <= 0:
-        raise HTTPException(status_code=402, detail="No credits remaining. Purchase more to continue.")
+    admin = _is_admin(user_id)
+    if not admin:
+        balance = get_or_create_balance(user_id)
+        if balance <= 0:
+            raise HTTPException(status_code=402, detail="No credits remaining. Purchase more to continue.")
     try:
         result = run_audit(req.handle, req.tier, req.self_archetype)
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Audit failed: {e}")
-    new_balance = deduct_credit(user_id)
+    if not admin:
+        new_balance = deduct_credit(user_id)
+    else:
+        new_balance = get_or_create_balance(user_id)
     save_audit(user_id, req.handle, req.tier, result.model_dump())
     return JSONResponse(
         content=result.model_dump(),
