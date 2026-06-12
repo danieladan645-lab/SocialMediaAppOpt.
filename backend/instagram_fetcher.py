@@ -1,3 +1,4 @@
+import os
 import requests
 
 
@@ -22,8 +23,12 @@ def fetch_profile(handle: str) -> dict | None:
     """
     username = handle.lstrip("@").strip()
     url = f"https://i.instagram.com/api/v1/users/web_profile_info/?username={username}"
+    headers = dict(_HEADERS)
+    session_id = os.getenv("INSTAGRAM_SESSION_ID")
+    if session_id:
+        headers["Cookie"] = f"sessionid={session_id}"
     try:
-        r = requests.get(url, headers=_HEADERS, timeout=10)
+        r = requests.get(url, headers=headers, timeout=10)
         if r.status_code != 200:
             return None
         user = r.json()["data"]["user"]
