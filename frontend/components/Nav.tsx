@@ -14,10 +14,7 @@ export default function Nav() {
         BRAND AUDIT
       </Link>
       <nav className="flex items-center gap-6">
-        <Link href="/stats" className="text-warm-white/40 hover:text-warm-white text-sm transition-colors">
-          Quick Stats
-        </Link>
-        <Link href="/" className="text-warm-white/40 hover:text-warm-white text-sm transition-colors">
+<Link href="/" className="text-warm-white/40 hover:text-warm-white text-sm transition-colors">
           Full Audit
         </Link>
         {isLoaded && (
