@@ -24,7 +24,7 @@ def get_user_id(authorization: Optional[str] = Header(None)) -> str:
     try:
         client = _get_jwks()
         signing_key = client.get_signing_key_from_jwt(token)
-        payload = jwt.decode(token, signing_key.key, algorithms=["RS256"], leeway=60)
+        payload = jwt.decode(token, signing_key.key, algorithms=["RS256"], leeway=300)
         user_id = payload.get("sub")
         if not user_id:
             raise HTTPException(status_code=401, detail="Token missing sub claim")
