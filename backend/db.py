@@ -17,12 +17,11 @@ def _db():
 
 
 def get_or_create_balance(user_id: str) -> int:
-    try:
-        result = _db().table("credits").select("balance").eq("user_id", user_id).single().execute()
-        return result.data["balance"]
-    except Exception:
-        _db().table("credits").insert({"user_id": user_id, "balance": 1}).execute()
-        return 1
+    result = _db().table("credits").select("balance").eq("user_id", user_id).execute()
+    if result.data:
+        return result.data[0]["balance"]
+    _db().table("credits").insert({"user_id": user_id, "balance": 1}).execute()
+    return 1
 
 
 def deduct_credit(user_id: str) -> int:
