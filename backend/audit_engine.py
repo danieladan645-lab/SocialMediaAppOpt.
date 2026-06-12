@@ -69,7 +69,15 @@ Use the exact follower count above ({followers_fmt}) for the Instagram Followers
             f'  ],'
         )
     else:
-        data_block = "LIVE PROFILE DATA: Could not be fetched (private account or unavailable). Estimate where possible; use '—' for metrics you cannot determine with confidence."
+        data_block = (
+            "LIVE PROFILE DATA: Could not be fetched (private account or API unavailable). "
+            "Estimate where possible; use '—' for metrics you cannot determine with confidence.\n\n"
+            "HIGHLIGHT NOTE: Instagram highlight names and cover images cannot be retrieved remotely. "
+            "For highlight_rows, do NOT fabricate 'Unknown Highlight' placeholders. Instead, generate "
+            "5 highlight structures this brand SHOULD build for their archetype — treat each as a "
+            "prescription. Use actionable names (e.g. 'Start Here', 'Testimonials', 'Services'). "
+            "Set cover_quality to 'Recommended — not yet verified' and write a prescriptive recommendation."
+        )
         confidence_note = "Data confidence: 4/10 (profile data unavailable — all values are estimates)."
         stat_cards_schema = (
             '"stat_cards": [\n'
