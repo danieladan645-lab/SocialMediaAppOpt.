@@ -10,7 +10,7 @@ from audit_engine import run_audit, suggest_competitors, run_teaser_audit
 from auth import get_user_id
 from db import get_or_create_balance, deduct_credit, save_audit
 from stripe_routes import router as stripe_router
-from instagram_fetcher import fetch_profile
+from instagram_fetcher import fetch_profile, _fetch_via_rapidapi_raw
 from models import AuditData, CompareData
 from renderers.docx_renderer import build_docx
 from renderers.pptx_renderer import build_pptx
@@ -55,6 +55,15 @@ class SuggestRequest(BaseModel):
 @app.get("/health")
 def health():
     return {"status": "ok"}
+
+
+@app.get("/debug/instagram/{handle}")
+def debug_instagram(handle: str):
+    """Returns raw RapidAPI response for debugging response structure."""
+    username = handle.lstrip("@").strip()
+    raw = _fetch_via_rapidapi_raw(username)
+    parsed = fetch_profile(handle)
+    return {"raw": raw, "parsed": parsed}
 
 
 @app.get("/stats/{handle}")

@@ -47,6 +47,22 @@ def _parse_user(user: dict) -> dict:
     }
 
 
+def _fetch_via_rapidapi_raw(username: str) -> dict:
+    """Returns raw API response for debugging. Never raises."""
+    api_key = os.getenv("RAPIDAPI_KEY")
+    if not api_key:
+        return {"error": "RAPIDAPI_KEY not set"}
+    try:
+        url = f"https://{_RAPIDAPI_HOST}/user/info_v2/?username={username}"
+        r = requests.get(url, headers={
+            "X-RapidAPI-Key": api_key,
+            "X-RapidAPI-Host": _RAPIDAPI_HOST,
+        }, timeout=10)
+        return {"status": r.status_code, "body": r.json()}
+    except Exception as e:
+        return {"error": str(e)}
+
+
 def _fetch_via_rapidapi(username: str) -> dict | None:
     api_key = os.getenv("RAPIDAPI_KEY")
     if not api_key:
