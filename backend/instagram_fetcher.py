@@ -15,7 +15,7 @@ _DIRECT_HEADERS = {
     "Origin": "https://www.instagram.com",
 }
 
-_RAPIDAPI_HOST = "instagram-scraper-ai1.p.rapidapi.com"
+_RAPIDAPI_HOST = "free-instagram-scraper.p.rapidapi.com"
 
 
 def _parse_user(user: dict) -> dict:
@@ -53,7 +53,7 @@ def _fetch_via_rapidapi_raw(username: str) -> dict:
     if not api_key:
         return {"error": "RAPIDAPI_KEY not set"}
     try:
-        url = f"https://{_RAPIDAPI_HOST}/user/info_v2/?username={username}"
+        url = f"https://{_RAPIDAPI_HOST}/v1/users/{username}"
         r = requests.get(url, headers={
             "X-RapidAPI-Key": api_key,
             "X-RapidAPI-Host": _RAPIDAPI_HOST,
@@ -68,7 +68,7 @@ def _fetch_via_rapidapi(username: str) -> dict | None:
     if not api_key:
         return None
     try:
-        url = f"https://{_RAPIDAPI_HOST}/user/info_v2/?username={username}"
+        url = f"https://{_RAPIDAPI_HOST}/v1/users/{username}"
         r = requests.get(url, headers={
             "X-RapidAPI-Key": api_key,
             "X-RapidAPI-Host": _RAPIDAPI_HOST,
