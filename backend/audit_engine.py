@@ -270,6 +270,36 @@ def run_audit(handle: str, tier: str, self_archetype: str, profile_data: dict | 
     return AuditData(**data)
 
 
+def run_teaser_audit(handle: str, self_archetype: str) -> dict:
+    client = anthropic.Anthropic(api_key=os.environ["ANTHROPIC_API_KEY"])
+    archetype_name, stat_priority = ARCHETYPE_MAP.get(
+        self_archetype, ("Course Creator", "Trust → Conversion → Loyalty")
+    )
+    today = date.today().strftime("%B %Y")
+    prompt = (
+        f"Audit the Instagram profile {handle} ({archetype_name}, stat priority: {stat_priority}) as of {today}.\n"
+        f"You cannot access Instagram directly — estimate from what you know about this brand/handle.\n\n"
+        f"Return ONLY a valid JSON object. No markdown. No prose.\n"
+        f'{{"display_name":"<real name or handle>","overall_score":"<X.X / 10>",'
+        f'"data_archetype":"<course_creator|product_brand|service_provider|content_monetizer|community_builder>",'
+        f'"archetype_gap_note":"<1 sentence: does the data match the self-ID or not and what it costs them>",'
+        f'"quick_wins":["<win1>","<win2>","<win3>"]}}'
+    )
+    resp = client.messages.create(
+        model="claude-haiku-4-5-20251001",
+        max_tokens=400,
+        system=load_skill(),
+        messages=[{"role": "user", "content": prompt}],
+    )
+    raw = resp.content[0].text.strip()
+    if raw.startswith("```"):
+        raw = raw.split("```")[1]
+        if raw.startswith("json"):
+            raw = raw[4:]
+        raw = raw.strip()
+    return json.loads(raw)
+
+
 def suggest_competitors(handle: str, archetype_key: str, bio: str) -> list[str]:
     client = anthropic.Anthropic(api_key=os.environ["ANTHROPIC_API_KEY"])
     archetype_name = ARCHETYPE_MAP.get(archetype_key, ("Course Creator", ""))[0]

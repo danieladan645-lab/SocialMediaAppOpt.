@@ -6,7 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, StreamingResponse
 from pydantic import BaseModel
 
-from audit_engine import run_audit, suggest_competitors
+from audit_engine import run_audit, suggest_competitors, run_teaser_audit
 from auth import get_user_id
 from db import get_or_create_balance, deduct_credit, save_audit
 from stripe_routes import router as stripe_router
@@ -71,6 +71,15 @@ def credits_balance(user_id: str = Depends(get_user_id)):
         return {"balance": 9999}
     balance = get_or_create_balance(user_id)
     return {"balance": balance}
+
+
+@app.post("/audit/teaser")
+def audit_teaser_endpoint(req: AuditRequest):
+    try:
+        result = run_teaser_audit(req.handle, req.self_archetype)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Teaser failed: {e}")
+    return JSONResponse(content=result)
 
 
 @app.post("/audit/suggest-competitors")

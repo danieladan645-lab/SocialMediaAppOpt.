@@ -1,16 +1,16 @@
 "use client";
 
-import { useState, Suspense } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
-import { useUser, useAuth, SignInButton } from "@clerk/nextjs";
+import { useUser, useAuth } from "@clerk/nextjs";
 import AuditForm from "@/components/AuditForm";
 import AuditResults from "@/components/AuditResults";
 import CompareResults from "@/components/CompareResults";
-import TokenPackPicker from "@/components/TokenPackPicker";
-import { runAuditPreview, runCompareAudit, AuditData, CompareData, AuditRequest } from "@/lib/api";
+import TeaserResults from "@/components/TeaserResults";
+import { runAuditPreview, runTeaserAudit, runCompareAudit, AuditData, CompareData, AuditRequest, TeaserData } from "@/lib/api";
 import { useBalance } from "@/contexts/BalanceContext";
 
-type Phase = "form" | "loading" | "results" | "compare";
+type Phase = "form" | "loading_teaser" | "teaser" | "loading_full" | "results" | "compare";
 
 const LOADING_MESSAGES = [
   "Scanning your brand presence…",
@@ -24,18 +24,28 @@ function HomeInner() {
   const searchParams = useSearchParams();
   const initialHandle = searchParams.get("handle") ?? "";
   const [phase, setPhase] = useState<Phase>("form");
+  const [teaserData, setTeaserData] = useState<TeaserData | null>(null);
+  const [teaserReq, setTeaserReq] = useState<AuditRequest | null>(null);
   const [auditData, setAuditData] = useState<AuditData | null>(null);
   const [compareData, setCompareData] = useState<CompareData | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loadingMsg, setLoadingMsg] = useState(LOADING_MESSAGES[0]);
 
-  const { isSignedIn, isLoaded } = useUser();
+  const { isSignedIn } = useUser();
   const { getToken } = useAuth();
   const { balance, refresh: refreshBalance } = useBalance();
 
-  function startLoading() {
+  // After signing in while on the teaser screen, auto-run full audit if credits available
+  useEffect(() => {
+    if (isSignedIn && phase === "teaser" && teaserReq && balance !== null && balance > 0) {
+      handleFullAudit(teaserReq);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isSignedIn, balance]);
+
+  function startLoading(msg?: string) {
     setError(null);
-    setPhase("loading");
+    setLoadingMsg(msg || LOADING_MESSAGES[0]);
     let idx = 0;
     const interval = setInterval(() => {
       idx = (idx + 1) % LOADING_MESSAGES.length;
@@ -44,8 +54,26 @@ function HomeInner() {
     return () => { clearInterval(interval); setLoadingMsg(LOADING_MESSAGES[0]); };
   }
 
-  async function handleSubmit(req: AuditRequest) {
+  async function handleTeaserSubmit(req: AuditRequest) {
+    const stop = startLoading("Scanning profile…");
+    setPhase("loading_teaser");
+    try {
+      const data = await runTeaserAudit(req);
+      setTeaserData(data);
+      setTeaserReq(req);
+      setPhase("teaser");
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : "Preview failed. Try again.";
+      setError(msg);
+      setPhase("form");
+    } finally {
+      stop();
+    }
+  }
+
+  async function handleFullAudit(req: AuditRequest) {
     const stop = startLoading();
+    setPhase("loading_full");
     try {
       const token = (await getToken()) ?? undefined;
       const data = await runAuditPreview(req, token);
@@ -55,7 +83,7 @@ function HomeInner() {
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : "Audit failed. Try again.";
       setError(msg);
-      setPhase("form");
+      setPhase("teaser");
     } finally {
       stop();
     }
@@ -63,6 +91,7 @@ function HomeInner() {
 
   async function handleCompare(req: { handle: string; competitor_handle: string; self_archetype: string }) {
     const stop = startLoading();
+    setPhase("loading_full");
     try {
       const token = (await getToken()) ?? undefined;
       const data = await runCompareAudit(req, token);
@@ -78,12 +107,32 @@ function HomeInner() {
     }
   }
 
-  if (phase === "loading") {
+  // Loading screen (both teaser and full audit)
+  if (phase === "loading_teaser" || phase === "loading_full") {
     return (
       <div className="min-h-[80vh] flex flex-col items-center justify-center gap-6">
         <div className="w-10 h-10 border-2 border-teal border-t-transparent rounded-full animate-spin" />
         <p className="text-warm-white/50 text-sm tracking-wide">{loadingMsg}</p>
+        {phase === "loading_teaser" && (
+          <p className="text-warm-white/25 text-xs">Free preview — no sign-in required</p>
+        )}
       </div>
+    );
+  }
+
+  if (phase === "teaser" && teaserData && teaserReq) {
+    return (
+      <TeaserResults
+        data={teaserData}
+        req={teaserReq}
+        onUnlock={() => handleFullAudit(teaserReq)}
+        onReset={() => {
+          setPhase("form");
+          setTeaserData(null);
+          setTeaserReq(null);
+          setError(null);
+        }}
+      />
     );
   }
 
@@ -120,7 +169,7 @@ function HomeInner() {
             Know exactly where<br />your brand stands.
           </h1>
           <p className="text-warm-white/40 text-base">
-            Submit your handle. Get a full audit. No sugarcoating.
+            Submit your handle. Get a free preview instantly. No sign-in required.
           </p>
         </div>
         {error && (
@@ -128,20 +177,7 @@ function HomeInner() {
             {error}
           </div>
         )}
-        {isLoaded && !isSignedIn ? (
-          <div className="rounded-xl border border-white/10 bg-white/5 p-10 text-center space-y-4">
-            <p className="text-warm-white/60 text-base">Sign in to run your first free audit.</p>
-            <SignInButton mode="modal">
-              <button className="px-6 py-2.5 rounded-lg bg-coral text-white font-semibold hover:bg-coral/90 transition-colors">
-                Sign In — It&apos;s Free
-              </button>
-            </SignInButton>
-          </div>
-        ) : balance === 0 ? (
-          <TokenPackPicker />
-        ) : (
-          <AuditForm onSubmit={handleSubmit} onCompare={handleCompare} initialHandle={initialHandle} />
-        )}
+        <AuditForm onSubmit={handleTeaserSubmit} onCompare={handleCompare} initialHandle={initialHandle} />
       </div>
     </main>
   );

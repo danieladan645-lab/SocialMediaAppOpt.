@@ -95,6 +95,27 @@ export interface AuditData {
   score_rows: ScoreRow[];
 }
 
+export interface TeaserData {
+  display_name: string;
+  overall_score: string;
+  data_archetype: string;
+  archetype_gap_note: string;
+  quick_wins: string[];
+}
+
+export async function runTeaserAudit(req: AuditRequest): Promise<TeaserData> {
+  const res = await fetch(`${API_BASE}/audit/teaser`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(req),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error((err as { detail?: string }).detail || `Teaser failed (${res.status})`);
+  }
+  return res.json();
+}
+
 export interface ProfileStats {
   followers: number;
   following: number;
