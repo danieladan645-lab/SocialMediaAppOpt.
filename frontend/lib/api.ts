@@ -1,6 +1,10 @@
 export interface AuditRequest {
   handle: string;
   self_archetype: string;
+  manual_followers?: number;
+  manual_following?: number;
+  manual_posts?: number;
+  manual_years?: number;
 }
 
 export interface ProfileSnapshot {

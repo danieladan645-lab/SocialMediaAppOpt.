@@ -14,16 +14,29 @@ export default function AuditForm({ onSubmit, onCompare, initialHandle = "" }: P
   const [handle, setHandle] = useState(initialHandle);
   const [competitorHandle, setCompetitorHandle] = useState("");
   const [archetype, setArchetype] = useState<ArchetypeKey | "">("");
+  const [showStats, setShowStats] = useState(false);
+  const [manualFollowers, setManualFollowers] = useState("");
+  const [manualFollowing, setManualFollowing] = useState("");
+  const [manualPosts, setManualPosts] = useState("");
+  const [manualYears, setManualYears] = useState("");
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!handle.trim() || !archetype) return;
     const h = handle.startsWith("@") ? handle : `@${handle}`;
+
+    const manualStats = {
+      ...(manualFollowers ? { manual_followers: parseInt(manualFollowers.replace(/[^0-9]/g, "")) } : {}),
+      ...(manualFollowing ? { manual_following: parseInt(manualFollowing.replace(/[^0-9]/g, "")) } : {}),
+      ...(manualPosts ? { manual_posts: parseInt(manualPosts.replace(/[^0-9]/g, "")) } : {}),
+      ...(manualYears ? { manual_years: parseInt(manualYears.replace(/[^0-9]/g, "")) } : {}),
+    };
+
     if (competitorHandle.trim() && onCompare) {
       const c = competitorHandle.startsWith("@") ? competitorHandle : `@${competitorHandle}`;
       onCompare({ handle: h, competitor_handle: c, self_archetype: archetype });
     } else {
-      onSubmit({ handle: h, self_archetype: archetype });
+      onSubmit({ handle: h, self_archetype: archetype, ...manualStats });
     }
   }
 
@@ -71,7 +84,45 @@ export default function AuditForm({ onSubmit, onCompare, initialHandle = "" }: P
         )}
       </div>
 
-      {/* Archetype — placeholder layout, user designs these cards */}
+      {/* Manual stats (collapsible) */}
+      <div>
+        <button
+          type="button"
+          onClick={() => setShowStats(!showStats)}
+          className="flex items-center gap-2 text-xs font-semibold text-warm-white/40 uppercase tracking-widest hover:text-warm-white/60 transition-colors"
+        >
+          <span>{showStats ? "▼" : "▶"}</span>
+          Enter Your Stats <span className="normal-case font-normal text-warm-white/20">(optional — improves accuracy)</span>
+        </button>
+
+        {showStats && (
+          <div className="mt-4 grid grid-cols-2 gap-3">
+            {[
+              { label: "Followers", value: manualFollowers, set: setManualFollowers, placeholder: "e.g. 12500" },
+              { label: "Following", value: manualFollowing, set: setManualFollowing, placeholder: "e.g. 800" },
+              { label: "Posts", value: manualPosts, set: setManualPosts, placeholder: "e.g. 247" },
+              { label: "Years Active", value: manualYears, set: setManualYears, placeholder: "e.g. 3" },
+            ].map(({ label, value, set, placeholder }) => (
+              <div key={label}>
+                <label className="block text-xs text-warm-white/30 mb-1">{label}</label>
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  value={value}
+                  onChange={(e) => set(e.target.value)}
+                  placeholder={placeholder}
+                  className="w-full bg-dark-2 border border-white/10 rounded-lg px-3 py-2 text-warm-white placeholder-warm-white/20 text-sm outline-none focus:border-teal transition-colors"
+                />
+              </div>
+            ))}
+            <p className="col-span-2 text-xs text-warm-white/25 mt-1">
+              These override AI estimates — leave blank to let the audit estimate them.
+            </p>
+          </div>
+        )}
+      </div>
+
+      {/* Archetype */}
       <div>
         <label className="block text-xs font-semibold text-warm-white/40 uppercase tracking-widest mb-1">
           Your Brand Archetype

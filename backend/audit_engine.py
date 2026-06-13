@@ -39,7 +39,7 @@ def _fmt_followers(n: int) -> str:
     return str(n)
 
 
-def _build_user_message(handle: str, tier: str, self_archetype: str, profile_data: dict | None = None) -> str:
+def _build_user_message(handle: str, tier: str, self_archetype: str, profile_data: dict | None = None, manual_years: int | None = None) -> str:
     archetype_name, stat_priority = ARCHETYPE_MAP.get(
         self_archetype, ("Course Creator", "Trust → Conversion → Loyalty")
     )
@@ -47,43 +47,62 @@ def _build_user_message(handle: str, tier: str, self_archetype: str, profile_dat
     today = date.today().strftime("%B %Y")
 
     if profile_data:
+        is_manual = profile_data.get("_manual", False)
         followers_fmt = _fmt_followers(profile_data["followers"])
-        data_block = f"""LIVE PROFILE DATA (fetched automatically — use these exact values):
+        source_label = "USER-PROVIDED STATS" if is_manual else "LIVE PROFILE DATA (fetched automatically)"
+        data_block = f"""{source_label} — use these exact values:
 - Full name: {profile_data["full_name"] or handle}
 - Followers: {followers_fmt} ({profile_data["followers"]:,})
 - Following: {profile_data["following"]:,}
 - Posts: {profile_data["posts"]:,}
 - Bio: {profile_data["bio"] or "—"}
 - Bio link: {profile_data["external_url"] or "—"}
-- Verified: {"Yes" if profile_data["is_verified"] else "No"}
+- Verified: {"Yes" if profile_data.get("is_verified") else "No"}
 
 Use the exact follower count above ({followers_fmt}) for the Instagram Followers stat card. Do not estimate or override these values."""
-        confidence_note = "Data confidence: 7/10 (live public profile data fetched at audit time — follower count and profile stats are accurate; content analysis is inferred)."
+        confidence_note = (
+            "Data confidence: 6/10 (user-provided stats — follower/post counts are accurate as entered; content analysis is inferred)."
+            if is_manual else
+            "Data confidence: 7/10 (live public profile data fetched at audit time — follower count and profile stats are accurate; content analysis is inferred)."
+        )
         posts_fmt = _fmt_followers(profile_data["posts"])
         following_fmt = _fmt_followers(profile_data["following"])
+        years_card = (
+            f',\n    {{"value": "{manual_years}+ Years", "label": "Creating Content"}}'
+            if manual_years else ""
+        )
         stat_cards_schema = (
             f'"stat_cards": [\n'
             f'    {{"value": "{followers_fmt}", "label": "Instagram Followers"}},\n'
             f'    {{"value": "{posts_fmt}", "label": "Total Posts"}},\n'
-            f'    {{"value": "{following_fmt}", "label": "Following"}}\n'
+            f'    {{"value": "{following_fmt}", "label": "Following"}}{years_card}\n'
             f'  ],'
         )
     else:
+        years_hint = f" Account has been active for approximately {manual_years} years." if manual_years else ""
         data_block = (
-            "LIVE PROFILE DATA: Could not be fetched (private account or API unavailable). "
-            "Estimate where possible; use '—' for metrics you cannot determine with confidence.\n\n"
+            f"LIVE PROFILE DATA: Could not be fetched (private account or API unavailable).{years_hint}\n"
+            "Based on your training knowledge of this handle/brand, estimate realistic values. "
+            "DO NOT use '—' for follower counts or numeric stats — provide a best-estimate figure "
+            "formatted as e.g. '~8.2K', '~142K', or '~2.1M'. If you have no knowledge of this handle, "
+            "estimate based on the niche and archetype for a typical account at this stage.\n\n"
             "HIGHLIGHT NOTE: Instagram highlight names and cover images cannot be retrieved remotely. "
             "For highlight_rows, do NOT fabricate 'Unknown Highlight' placeholders. Instead, generate "
             "5 highlight structures this brand SHOULD build for their archetype — treat each as a "
             "prescription. Use actionable names (e.g. 'Start Here', 'Testimonials', 'Services'). "
             "Set cover_quality to 'Recommended — not yet verified' and write a prescriptive recommendation."
         )
-        confidence_note = "Data confidence: 4/10 (profile data unavailable — all values are estimates)."
+        confidence_note = "Data confidence: 3/10 (no profile data — all numeric values are AI estimates; flag them with '~' prefix)."
+        years_card = (
+            f'    {{"value": "{manual_years}+ Years", "label": "Creating Content"}}\n'
+            if manual_years else
+            '    {"value": "<estimate e.g. ~3+ Years>", "label": "Creating Content"}\n'
+        )
         stat_cards_schema = (
             '"stat_cards": [\n'
-            '    {"value": "<big number/text>", "label": "<platform> Followers"},\n'
-            '    {"value": "<combined number>", "label": "Combined Followers"},\n'
-            '    {"value": "<X>+ Years", "label": "Creating Content"}\n'
+            '    {"value": "<estimate e.g. ~12.4K>", "label": "Instagram Followers (est.)"},\n'
+            '    {"value": "<estimate e.g. ~14.1K>", "label": "Combined Followers (est.)"},\n'
+            f'    {years_card}'
             '  ],'
         )
 
@@ -242,13 +261,29 @@ def _clean(obj):
     return obj
 
 
-def run_audit(handle: str, tier: str, self_archetype: str, profile_data: dict | None = None, *, skip_fetch: bool = False) -> AuditData:
+def run_audit(handle: str, tier: str, self_archetype: str, profile_data: dict | None = None, *, skip_fetch: bool = False, manual_stats: dict | None = None) -> AuditData:
     client = anthropic.Anthropic(api_key=os.environ["ANTHROPIC_API_KEY"])
 
     if not skip_fetch:
         profile_data = fetch_profile(handle)
+
+    # Merge manual stats into profile_data if no live data was fetched
+    if profile_data is None and manual_stats:
+        profile_data = {
+            "followers": manual_stats.get("followers", 0),
+            "following": manual_stats.get("following", 0),
+            "posts": manual_stats.get("posts", 0),
+            "full_name": "",
+            "bio": "",
+            "external_url": "",
+            "is_verified": False,
+            "is_private": False,
+            "_manual": True,
+        }
+
+    manual_years = manual_stats.get("years") if manual_stats else None
     system_prompt = load_skill()
-    user_message = _build_user_message(handle, tier, self_archetype, profile_data)
+    user_message = _build_user_message(handle, tier, self_archetype, profile_data, manual_years=manual_years)
 
     response = client.messages.create(
         model="claude-sonnet-4-6",

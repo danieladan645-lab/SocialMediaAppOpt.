@@ -37,6 +37,10 @@ class AuditRequest(BaseModel):
     handle: str
     tier: str = "basic"
     self_archetype: str = "course_creator"
+    manual_followers: int | None = None
+    manual_following: int | None = None
+    manual_posts: int | None = None
+    manual_years: int | None = None
 
 
 class CompareRequest(BaseModel):
@@ -134,8 +138,16 @@ def audit_preview(req: AuditRequest, user_id: str = Depends(get_user_id)):
         balance = get_or_create_balance(user_id)
         if balance <= 0:
             raise HTTPException(status_code=402, detail="No credits remaining. Purchase more to continue.")
+    manual_stats = {
+        k: v for k, v in {
+            "followers": req.manual_followers,
+            "following": req.manual_following,
+            "posts": req.manual_posts,
+            "years": req.manual_years,
+        }.items() if v is not None
+    }
     try:
-        result = run_audit(req.handle, req.tier, req.self_archetype)
+        result = run_audit(req.handle, req.tier, req.self_archetype, manual_stats=manual_stats or None)
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Audit failed: {e}")
     if not admin:
