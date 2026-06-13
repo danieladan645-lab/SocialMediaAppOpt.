@@ -313,16 +313,21 @@ def run_teaser_audit(handle: str, self_archetype: str) -> dict:
     today = date.today().strftime("%B %Y")
     prompt = (
         f"Audit the Instagram profile {handle} ({archetype_name}, stat priority: {stat_priority}) as of {today}.\n"
-        f"You cannot access Instagram directly — estimate from what you know about this brand/handle.\n\n"
-        f"Return ONLY a valid JSON object. No markdown. No prose.\n"
-        f'{{"display_name":"<real name or handle>","overall_score":"<X.X / 10>",'
+        f"You cannot access Instagram directly — estimate from your training knowledge of this brand/handle.\n\n"
+        f"Return ONLY a valid JSON object. No markdown. No prose. No code fences.\n"
+        f'{{"display_name":"<real name or handle>",'
+        f'"overall_score":"<X.X / 10>",'
         f'"data_archetype":"<course_creator|product_brand|service_provider|content_monetizer|community_builder>",'
-        f'"archetype_gap_note":"<1 sentence: does the data match the self-ID or not and what it costs them>",'
+        f'"archetype_gap_note":"<1 sentence: does data match self-ID; what it costs them if not>",'
+        f'"estimated_followers":"<best estimate with ~ prefix e.g. ~8.2K or ~142K — never use a dash>",'
+        f'"bio_score":"<X / 10>",'
+        f'"content_score":"<X / 10>",'
+        f'"biggest_gap":"<1 punchy sentence — the single most costly visible brand gap that the full audit will diagnose>",'
         f'"quick_wins":["<win1>","<win2>","<win3>"]}}'
     )
     resp = client.messages.create(
         model="claude-haiku-4-5-20251001",
-        max_tokens=400,
+        max_tokens=600,
         system=load_skill(),
         messages=[{"role": "user", "content": prompt}],
     )

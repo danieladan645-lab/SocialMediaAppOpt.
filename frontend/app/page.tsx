@@ -125,7 +125,7 @@ function HomeInner() {
       <TeaserResults
         data={teaserData}
         req={teaserReq}
-        onUnlock={() => handleFullAudit(teaserReq)}
+        onUnlock={(extras) => handleFullAudit({ ...teaserReq, ...extras })}
         onReset={() => {
           setPhase("form");
           setTeaserData(null);

@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { useUser, useAuth, SignInButton } from "@clerk/nextjs";
 import { TeaserData, AuditRequest } from "@/lib/api";
 import { ARCHETYPES } from "@/lib/archetypes";
@@ -24,6 +25,20 @@ function getRank(scoreStr: string) {
   return { name: "Cub", color: "rgba(255,255,255,0.4)" };
 }
 
+function getScoreColor(scoreStr: string): string {
+  const match = scoreStr.match(/[\d.]+/);
+  if (!match) return "text-warm-white/40";
+  const n = parseFloat(match[0]);
+  if (n >= 7) return "text-teal";
+  if (n >= 5) return "text-gold";
+  return "text-coral";
+}
+
+function parseNum(val: string): number | undefined {
+  const n = parseInt(val.replace(/[^0-9]/g, ""), 10);
+  return isNaN(n) ? undefined : n;
+}
+
 const LOCKED_SECTIONS = [
   "Bio & CTA Analysis",
   "Visual Grid Breakdown",
@@ -35,10 +50,17 @@ const LOCKED_SECTIONS = [
   "Score Breakdown",
 ];
 
+interface ManualStats {
+  manual_followers?: number;
+  manual_following?: number;
+  manual_posts?: number;
+  manual_years?: number;
+}
+
 interface Props {
   data: TeaserData;
   req: AuditRequest;
-  onUnlock: () => void;
+  onUnlock: (extras: ManualStats) => void;
   onReset: () => void;
 }
 
@@ -46,6 +68,13 @@ export default function TeaserResults({ data, req, onUnlock, onReset }: Props) {
   const { isSignedIn, isLoaded } = useUser();
   const { getToken } = useAuth();
   const { balance } = useBalance();
+
+  const [showStatInput, setShowStatInput] = useState(false);
+  const [manualFollowers, setManualFollowers] = useState("");
+  const [manualFollowing, setManualFollowing] = useState("");
+  const [manualPosts, setManualPosts] = useState("");
+  const [manualYears, setManualYears] = useState("");
+
   const rank = getRank(data.overall_score);
   const archetype = ARCHETYPES.find((a) => a.key === data.data_archetype);
 
@@ -53,6 +82,26 @@ export default function TeaserResults({ data, req, onUnlock, onReset }: Props) {
   const noCredits = isLoaded && isSignedIn && balance === 0;
 
   void getToken;
+
+  function handleUnlock() {
+    const extras: ManualStats = {};
+    const f = parseNum(manualFollowers);
+    const fo = parseNum(manualFollowing);
+    const p = parseNum(manualPosts);
+    const y = parseNum(manualYears);
+    if (f !== undefined) extras.manual_followers = f;
+    if (fo !== undefined) extras.manual_following = fo;
+    if (p !== undefined) extras.manual_posts = p;
+    if (y !== undefined) extras.manual_years = y;
+    onUnlock(extras);
+  }
+
+  const statInputFields = [
+    { label: "Followers", value: manualFollowers, set: setManualFollowers, placeholder: "e.g. 12500" },
+    { label: "Following", value: manualFollowing, set: setManualFollowing, placeholder: "e.g. 800" },
+    { label: "Posts", value: manualPosts, set: setManualPosts, placeholder: "e.g. 247" },
+    { label: "Years Active", value: manualYears, set: setManualYears, placeholder: "e.g. 3" },
+  ];
 
   return (
     <div className="w-full max-w-2xl mx-auto space-y-6 px-4 py-10">
@@ -67,6 +116,35 @@ export default function TeaserResults({ data, req, onUnlock, onReset }: Props) {
           <p className="text-3xl font-bold" style={{ color: rank.color }}>{data.overall_score}</p>
           <p className="text-sm mt-0.5" style={{ color: rank.color }}>{rank.name}</p>
         </div>
+      </div>
+
+      {/* Quick stats snapshot */}
+      <div className="rounded-xl border border-white/10 bg-white/5 p-5">
+        <p className="text-xs font-semibold text-warm-white/30 uppercase tracking-widest mb-4">Quick Stats</p>
+        <div className="grid grid-cols-3 gap-4 mb-4">
+          <div className="text-center">
+            <p className="text-xl font-bold text-teal">{data.estimated_followers || "—"}</p>
+            <p className="text-xs text-warm-white/40 mt-1">Est. Followers</p>
+          </div>
+          <div className="text-center">
+            <p className={`text-xl font-bold ${data.bio_score ? getScoreColor(data.bio_score) : "text-warm-white/40"}`}>
+              {data.bio_score || "—"}
+            </p>
+            <p className="text-xs text-warm-white/40 mt-1">Bio Score</p>
+          </div>
+          <div className="text-center">
+            <p className={`text-xl font-bold ${data.content_score ? getScoreColor(data.content_score) : "text-warm-white/40"}`}>
+              {data.content_score || "—"}
+            </p>
+            <p className="text-xs text-warm-white/40 mt-1">Content Score</p>
+          </div>
+        </div>
+        {data.biggest_gap && (
+          <div className="p-3 rounded-lg bg-coral/10 border border-coral/20">
+            <p className="text-xs font-semibold text-coral/70 uppercase tracking-widest mb-1">Biggest Gap Detected</p>
+            <p className="text-sm text-warm-white/80">{data.biggest_gap}</p>
+          </div>
+        )}
       </div>
 
       {/* Archetype */}
@@ -107,6 +185,39 @@ export default function TeaserResults({ data, req, onUnlock, onReset }: Props) {
         </div>
       </div>
 
+      {/* Optional: refine stats before unlocking */}
+      <div className="rounded-xl border border-white/10 bg-white/5 p-5">
+        <button
+          type="button"
+          onClick={() => setShowStatInput(!showStatInput)}
+          className="flex items-center gap-2 text-xs font-semibold text-warm-white/40 uppercase tracking-widest hover:text-warm-white/60 transition-colors w-full text-left"
+        >
+          <span className="text-warm-white/20">{showStatInput ? "▼" : "▶"}</span>
+          Know Your Real Numbers?
+          <span className="normal-case font-normal text-warm-white/20">(optional — improves full audit)</span>
+        </button>
+        {showStatInput && (
+          <div className="mt-4 grid grid-cols-2 gap-3">
+            {statInputFields.map(({ label, value, set, placeholder }) => (
+              <div key={label}>
+                <label className="block text-xs text-warm-white/30 mb-1">{label}</label>
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  value={value}
+                  onChange={(e) => set(e.target.value)}
+                  placeholder={placeholder}
+                  className="w-full bg-dark-2 border border-white/10 rounded-lg px-3 py-2 text-warm-white placeholder-warm-white/20 text-sm outline-none focus:border-teal transition-colors"
+                />
+              </div>
+            ))}
+            <p className="col-span-2 text-xs text-warm-white/25 mt-1">
+              These override the AI estimates in the full audit report.
+            </p>
+          </div>
+        )}
+      </div>
+
       {/* CTA */}
       {noCredits ? (
         <div className="space-y-4">
@@ -115,7 +226,7 @@ export default function TeaserResults({ data, req, onUnlock, onReset }: Props) {
         </div>
       ) : isReady ? (
         <button
-          onClick={onUnlock}
+          onClick={handleUnlock}
           className="w-full py-4 bg-coral text-white font-bold text-base rounded-lg hover:bg-coral/90 transition-colors"
         >
           Unlock Full Audit →

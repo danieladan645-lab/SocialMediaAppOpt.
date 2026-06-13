@@ -104,6 +104,10 @@ export interface TeaserData {
   overall_score: string;
   data_archetype: string;
   archetype_gap_note: string;
+  estimated_followers: string;
+  bio_score: string;
+  content_score: string;
+  biggest_gap: string;
   quick_wins: string[];
 }
 
