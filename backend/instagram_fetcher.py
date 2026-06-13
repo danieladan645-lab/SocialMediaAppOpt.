@@ -15,14 +15,32 @@ _DIRECT_HEADERS = {
     "Origin": "https://www.instagram.com",
 }
 
+_RAPIDAPI_HOST = "instagram-scraper-ai1.p.rapidapi.com"
+
 
 def _parse_user(user: dict) -> dict:
+    # Handle both flat format (follower_count) and nested format (edge_followed_by.count)
+    followers = (
+        user.get("follower_count")
+        or (user.get("edge_followed_by") or {}).get("count")
+        or 0
+    )
+    following = (
+        user.get("following_count")
+        or (user.get("edge_follow") or {}).get("count")
+        or 0
+    )
+    posts = (
+        user.get("media_count")
+        or (user.get("edge_owner_to_timeline_media") or {}).get("count")
+        or 0
+    )
     return {
-        "followers": user["edge_followed_by"]["count"],
-        "following": user["edge_follow"]["count"],
-        "posts": user["edge_owner_to_timeline_media"]["count"],
+        "followers": followers,
+        "following": following,
+        "posts": posts,
         "full_name": user.get("full_name") or "",
-        "bio": user.get("biography") or "",
+        "bio": user.get("biography") or user.get("bio") or "",
         "external_url": user.get("external_url") or "",
         "is_verified": user.get("is_verified", False),
         "is_private": user.get("is_private", False),
@@ -34,16 +52,22 @@ def _fetch_via_rapidapi(username: str) -> dict | None:
     if not api_key:
         return None
     try:
-        url = f"https://instagram-scraper-api2.p.rapidapi.com/v1/info?username_or_id_or_url={username}"
+        url = f"https://{_RAPIDAPI_HOST}/user/info_v2/?username={username}"
         r = requests.get(url, headers={
             "X-RapidAPI-Key": api_key,
-            "X-RapidAPI-Host": "instagram-scraper-api2.p.rapidapi.com",
+            "X-RapidAPI-Host": _RAPIDAPI_HOST,
         }, timeout=10)
         if r.status_code != 200:
             return None
         payload = r.json()
-        user = payload.get("data", {}).get("user") or payload.get("data")
-        if not user:
+        # Try nested then flat response structures
+        user = (
+            payload.get("data", {}).get("user")
+            or payload.get("data")
+            or payload.get("user")
+            or payload
+        )
+        if not user or not isinstance(user, dict):
             return None
         return _parse_user(user)
     except Exception:
