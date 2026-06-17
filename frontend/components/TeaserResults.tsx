@@ -7,24 +7,6 @@ import { ARCHETYPES } from "@/lib/archetypes";
 import TokenPackPicker from "@/components/TokenPackPicker";
 import { useBalance } from "@/contexts/BalanceContext";
 
-const RANK_THRESHOLDS: [number, number, string, string][] = [
-  [90, 100, "Ragnarök", "#E8604C"],
-  [75, 89,  "Dread",    "#F5A623"],
-  [60, 74,  "Warbrand", "#3DBFBF"],
-  [0,  59,  "Cub",      "rgba(255,255,255,0.4)"],
-];
-
-function getRank(scoreStr: string) {
-  const match = scoreStr.match(/[\d.]+/);
-  if (!match) return { name: "—", color: "rgba(255,255,255,0.4)" };
-  let n = parseFloat(match[0]);
-  if (n <= 10) n = n * 10;
-  for (const [min, max, name, color] of RANK_THRESHOLDS) {
-    if (n >= min && n <= max) return { name, color };
-  }
-  return { name: "Cub", color: "rgba(255,255,255,0.4)" };
-}
-
 function getScoreColor(scoreStr: string): string {
   const match = scoreStr.match(/[\d.]+/);
   if (!match) return "text-warm-white/40";
@@ -70,12 +52,12 @@ export default function TeaserResults({ data, req, onUnlock, onReset }: Props) {
   const { balance } = useBalance();
 
   const [showStatInput, setShowStatInput] = useState(false);
+  const [showConfirm, setShowConfirm] = useState(false);
   const [manualFollowers, setManualFollowers] = useState("");
   const [manualFollowing, setManualFollowing] = useState("");
   const [manualPosts, setManualPosts] = useState("");
   const [manualYears, setManualYears] = useState("");
 
-  const rank = getRank(data.overall_score);
   const archetype = ARCHETYPES.find((a) => a.key === data.data_archetype);
 
   const isReady = isLoaded && isSignedIn && balance !== null && balance > 0;
@@ -113,8 +95,7 @@ export default function TeaserResults({ data, req, onUnlock, onReset }: Props) {
           <p className="text-warm-white/40 text-sm mt-0.5">{req.handle} · Free Preview</p>
         </div>
         <div className="text-right">
-          <p className="text-3xl font-bold" style={{ color: rank.color }}>{data.overall_score}</p>
-          <p className="text-sm mt-0.5" style={{ color: rank.color }}>{rank.name}</p>
+          <p className="text-3xl font-bold text-gold">{data.overall_score}</p>
         </div>
       </div>
 
@@ -124,7 +105,7 @@ export default function TeaserResults({ data, req, onUnlock, onReset }: Props) {
         <div className="grid grid-cols-3 gap-4 mb-4">
           <div className="text-center">
             <p className="text-xl font-bold text-teal">{data.estimated_followers || "—"}</p>
-            <p className="text-xs text-warm-white/40 mt-1">Est. Followers</p>
+            <p className="text-xs text-warm-white/40 mt-1">Followers</p>
           </div>
           <div className="text-center">
             <p className={`text-xl font-bold ${data.bio_score ? getScoreColor(data.bio_score) : "text-warm-white/40"}`}>
@@ -139,6 +120,7 @@ export default function TeaserResults({ data, req, onUnlock, onReset }: Props) {
             <p className="text-xs text-warm-white/40 mt-1">Content Score</p>
           </div>
         </div>
+        <p className="text-xs text-warm-white/20 mt-3">* Follower count is an AI estimate based on public signals and may not be exact.</p>
         {data.biggest_gap && (
           <div className="p-3 rounded-lg bg-coral/10 border border-coral/20">
             <p className="text-xs font-semibold text-coral/70 uppercase tracking-widest mb-1">Biggest Gap Detected</p>
@@ -225,12 +207,37 @@ export default function TeaserResults({ data, req, onUnlock, onReset }: Props) {
           <TokenPackPicker />
         </div>
       ) : isReady ? (
-        <button
-          onClick={handleUnlock}
-          className="w-full py-4 bg-coral text-white font-bold text-base rounded-lg hover:bg-coral/90 transition-colors"
-        >
-          Unlock Full Audit →
-        </button>
+        showConfirm ? (
+          <div className="rounded-xl border border-teal/30 bg-teal/5 p-5 space-y-4">
+            <div>
+              <p className="text-warm-white font-bold text-base">Confirm Audit</p>
+              <p className="text-warm-white/50 text-sm mt-1">
+                1 audit credit will be used — {(balance ?? 1) - 1} remaining after.
+              </p>
+            </div>
+            <div className="flex gap-3">
+              <button
+                onClick={handleUnlock}
+                className="flex-1 py-3 bg-coral text-white font-bold text-sm rounded-lg hover:bg-coral/90 transition-colors"
+              >
+                Confirm &amp; Run Audit →
+              </button>
+              <button
+                onClick={() => setShowConfirm(false)}
+                className="px-4 py-3 text-warm-white/40 text-sm hover:text-warm-white/60 transition-colors"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        ) : (
+          <button
+            onClick={() => setShowConfirm(true)}
+            className="w-full py-4 bg-coral text-white font-bold text-base rounded-lg hover:bg-coral/90 transition-colors"
+          >
+            Unlock Full Audit →
+          </button>
+        )
       ) : (
         <SignInButton mode="modal">
           <button className="w-full py-4 bg-coral text-white font-bold text-base rounded-lg hover:bg-coral/90 transition-colors">

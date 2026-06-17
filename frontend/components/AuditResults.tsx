@@ -4,30 +4,12 @@ import { useState, useEffect } from "react";
 import { AuditData, downloadAuditDocx, downloadAuditPptx, suggestCompetitors } from "@/lib/api";
 import { ARCHETYPES } from "@/lib/archetypes";
 
-const RANK_THRESHOLDS: [number, number, string, string][] = [
-  [90, 100, "Ragnarök", "text-coral"],
-  [75, 89,  "Dread",    "text-gold"],
-  [60, 74,  "Warbrand", "text-teal"],
-  [0,  59,  "Cub",      "text-warm-white/50"],
-];
-
 const COLOR_MAP: Record<string, string> = {
   coral: "#E8604C",
   teal:  "#3DBFBF",
   gold:  "#F5A623",
   gray:  "#888888",
 };
-
-function getRank(scoreStr: string) {
-  const match = scoreStr.match(/[\d.]+/);
-  if (!match) return { name: "—", color: "text-warm-white/50" };
-  let n = parseFloat(match[0]);
-  if (n <= 10) n = n * 10;
-  for (const [min, max, name, color] of RANK_THRESHOLDS) {
-    if (n >= min && n <= max) return { name, color };
-  }
-  return { name: "Cub", color: "text-warm-white/50" };
-}
 
 function getArchetype(key: string) {
   return ARCHETYPES.find((a) => a.key === key);
@@ -41,7 +23,6 @@ interface Props {
 }
 
 export default function AuditResults({ data, onReset, backLabel = "← New Audit", onCompare }: Props) {
-  const rank = getRank(data.overall_score);
   const [downloading, setDownloading] = useState(false);
   const [downloadingPptx, setDownloadingPptx] = useState(false);
   const [downloadError, setDownloadError] = useState("");
@@ -90,7 +71,6 @@ export default function AuditResults({ data, onReset, backLabel = "← New Audit
         </div>
         <div className="flex items-center gap-3">
           <span className="text-warm-white/40 text-sm">{data.overall_score}</span>
-          <span className={`font-bold text-sm ${rank.color}`}>{rank.name}</span>
         </div>
       </header>
 
@@ -107,7 +87,6 @@ export default function AuditResults({ data, onReset, backLabel = "← New Audit
             </div>
             <div className="text-right shrink-0 ml-6">
               <div className="text-4xl font-bold text-gold">{data.overall_score}</div>
-              <div className={`text-sm font-semibold mt-1 ${rank.color}`}>{rank.name}</div>
             </div>
           </div>
 
