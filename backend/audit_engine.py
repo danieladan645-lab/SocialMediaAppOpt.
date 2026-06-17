@@ -325,19 +325,25 @@ def run_teaser_audit(handle: str, self_archetype: str) -> dict:
         f'"biggest_gap":"<1 punchy sentence — the single most costly visible brand gap that the full audit will diagnose>",'
         f'"quick_wins":["<win1>","<win2>","<win3>"]}}'
     )
-    resp = client.messages.create(
-        model="claude-haiku-4-5-20251001",
-        max_tokens=600,
-        system=load_skill(),
-        messages=[{"role": "user", "content": prompt}],
-    )
-    raw = resp.content[0].text.strip()
-    if raw.startswith("```"):
-        raw = raw.split("```")[1]
-        if raw.startswith("json"):
-            raw = raw[4:]
-        raw = raw.strip()
-    return json.loads(raw)
+    last_err: Exception = RuntimeError("Teaser audit failed after retries")
+    for _ in range(3):
+        resp = client.messages.create(
+            model="claude-haiku-4-5-20251001",
+            max_tokens=800,
+            system=load_skill(),
+            messages=[{"role": "user", "content": prompt}],
+        )
+        raw = resp.content[0].text.strip()
+        if raw.startswith("```"):
+            raw = raw.split("```")[1]
+            if raw.startswith("json"):
+                raw = raw[4:]
+            raw = raw.strip()
+        try:
+            return json.loads(raw)
+        except json.JSONDecodeError as e:
+            last_err = e
+    raise last_err
 
 
 def suggest_competitors(handle: str, archetype_key: str, bio: str) -> list[str]:
