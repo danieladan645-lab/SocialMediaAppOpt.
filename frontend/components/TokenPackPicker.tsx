@@ -37,7 +37,7 @@ export default function TokenPackPicker() {
       {error && (
         <p className="text-coral text-sm text-center">{error}</p>
       )}
-      <div className="grid grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         {PACKS.map((p) => (
           <div
             key={p.id}

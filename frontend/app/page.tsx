@@ -7,6 +7,7 @@ import AuditForm from "@/components/AuditForm";
 import AuditResults from "@/components/AuditResults";
 import CompareResults from "@/components/CompareResults";
 import TeaserResults from "@/components/TeaserResults";
+import LandingSection from "@/components/LandingSection";
 import { runAuditPreview, runTeaserAudit, runCompareAudit, AuditData, CompareData, AuditRequest, TeaserData } from "@/lib/api";
 import { useBalance } from "@/contexts/BalanceContext";
 
@@ -58,7 +59,7 @@ function HomeInner() {
     const stop = startLoading("Scanning profile…");
     setPhase("loading_teaser");
     try {
-      const data = await runTeaserAudit(req);
+      const data = await runTeaserAudit(req, (msg) => setLoadingMsg(msg));
       setTeaserData(data);
       setTeaserReq(req);
       setPhase("teaser");
@@ -162,10 +163,10 @@ function HomeInner() {
   }
 
   return (
-    <main className="flex items-center justify-center px-4 py-12 min-h-[80vh]">
-      <div className="w-full max-w-2xl">
+    <main className="px-4 sm:px-6 py-10 sm:py-16">
+      <div className="w-full max-w-2xl mx-auto">
         <div className="mb-10">
-          <h1 className="text-4xl font-bold text-warm-white mb-3 leading-tight">
+          <h1 className="text-3xl sm:text-4xl font-bold text-warm-white mb-3 leading-tight">
             Know exactly where<br />your brand stands.
           </h1>
           <p className="text-warm-white/40 text-base">
@@ -178,6 +179,7 @@ function HomeInner() {
           </div>
         )}
         <AuditForm onSubmit={handleTeaserSubmit} onCompare={handleCompare} initialHandle={initialHandle} />
+        <LandingSection />
       </div>
     </main>
   );

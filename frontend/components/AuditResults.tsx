@@ -74,7 +74,7 @@ export default function AuditResults({ data, onReset, backLabel = "← New Audit
         </div>
       </header>
 
-      <div className="max-w-4xl mx-auto px-6 py-10 space-y-12">
+      <div className="max-w-4xl mx-auto px-4 sm:px-6 py-10 space-y-12">
 
         {/* Hero: score + archetype gap */}
         <section>
@@ -127,7 +127,7 @@ export default function AuditResults({ data, onReset, backLabel = "← New Audit
         {data.stat_cards.length > 0 && (
           <section>
             <SectionLabel>By The Numbers</SectionLabel>
-            <div className="grid grid-cols-3 gap-4">
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
               {data.stat_cards.map((card, i) => (
                 <div
                   key={i}
@@ -207,10 +207,10 @@ export default function AuditResults({ data, onReset, backLabel = "← New Audit
             <SectionLabel>Highlights Analysis</SectionLabel>
             <div className="bg-dark-2 border border-white/5 rounded-xl overflow-hidden mb-3">
               {data.highlight_rows.map((row, i) => (
-                <div key={i} className="grid grid-cols-3 gap-4 px-5 py-3 border-b border-white/5 last:border-0">
-                  <span className="text-warm-white/80 text-sm font-medium">{row.name}</span>
-                  <span className="text-warm-white/50 text-sm">{row.cover_quality}</span>
-                  <span className="text-teal text-sm">{row.recommendation}</span>
+                <div key={i} className="px-5 py-3 border-b border-white/5 last:border-0 space-y-1 sm:space-y-0 sm:grid sm:grid-cols-3 sm:gap-4">
+                  <span className="block text-warm-white/80 text-sm font-medium">{row.name}</span>
+                  <span className="block text-warm-white/40 text-xs sm:text-sm">{row.cover_quality}</span>
+                  <span className="block text-teal text-sm">{row.recommendation}</span>
                 </div>
               ))}
             </div>
@@ -273,7 +273,7 @@ export default function AuditResults({ data, onReset, backLabel = "← New Audit
                   >
                     {p.title}
                   </div>
-                  <div className="px-5 pb-5 grid grid-cols-2 gap-x-8 gap-y-3">
+                  <div className="px-5 pb-5 grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-3">
                     {(([
                       ["Name", p.name],
                       ["Location", p.location],
@@ -324,7 +324,7 @@ export default function AuditResults({ data, onReset, backLabel = "← New Audit
         {(data.weaknesses.length > 0 || data.opportunities.length > 0) && (
           <section>
             <SectionLabel>Weaknesses & Opportunities</SectionLabel>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <div className="text-xs text-coral/70 font-semibold uppercase tracking-wide mb-2">Weaknesses</div>
                 {data.weaknesses.map((w, i) => (

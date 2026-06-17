@@ -9,29 +9,8 @@ interface AuditRecord {
   id: string;
   handle: string;
   tier: string;
-  self_archetype: string;
-  data_archetype: string;
-  overall_score: string;
-  audit_data: AuditData;
+  result: AuditData;
   created_at: string;
-}
-
-const RANK_THRESHOLDS: [number, number, string, string][] = [
-  [90, 100, "Ragnarök", "text-coral"],
-  [75, 89,  "Dread",    "text-gold"],
-  [60, 74,  "Warbrand", "text-teal"],
-  [0,  59,  "Cub",      "text-warm-white/40"],
-];
-
-function getRank(scoreStr: string) {
-  const match = scoreStr?.match(/[\d.]+/);
-  if (!match) return { name: "—", color: "text-warm-white/40" };
-  let n = parseFloat(match[0]);
-  if (n <= 10) n = n * 10;
-  for (const [min, max, name, color] of RANK_THRESHOLDS) {
-    if (n >= min && n <= max) return { name, color };
-  }
-  return { name: "Cub", color: "text-warm-white/40" };
 }
 
 function formatDate(iso: string) {
@@ -40,6 +19,15 @@ function formatDate(iso: string) {
     day: "numeric",
     year: "numeric",
   });
+}
+
+function getScoreColor(scoreStr: string): string {
+  const match = scoreStr?.match(/[\d.]+/);
+  if (!match) return "text-warm-white/40";
+  const n = parseFloat(match[0]);
+  if (n >= 7) return "text-teal";
+  if (n >= 5) return "text-gold";
+  return "text-coral";
 }
 
 export default function HistoryPage() {
@@ -80,7 +68,7 @@ export default function HistoryPage() {
   }
 
   return (
-    <main className="max-w-3xl mx-auto px-6 py-10">
+    <main className="max-w-3xl mx-auto px-4 sm:px-6 py-10">
       <h1 className="text-2xl font-bold text-warm-white mb-1">Audit History</h1>
       <p className="text-warm-white/40 text-sm mb-8">All past audits, newest first.</p>
 
@@ -98,36 +86,36 @@ export default function HistoryPage() {
       )}
 
       {!loading && !error && audits.length === 0 && (
-        <p className="text-warm-white/30 text-sm">
-          No audits yet. Submit your first one from the home page.
-        </p>
+        <div className="text-center py-16">
+          <p className="text-warm-white/30 text-sm mb-3">No audits yet.</p>
+          <a href="/" className="text-teal text-sm hover:underline">Run your first audit →</a>
+        </div>
       )}
 
       <div className="space-y-3">
         {audits.map((record) => {
-          const rank = getRank(record.overall_score);
+          const score = record.result?.overall_score;
           return (
             <div
               key={record.id}
-              className="flex items-center justify-between px-5 py-4 bg-dark-2 border border-white/5 rounded-xl"
+              className="flex items-center justify-between gap-4 px-4 sm:px-5 py-4 bg-dark-2 border border-white/5 rounded-xl"
             >
-              <div className="flex items-center gap-5">
-                <div>
-                  <div className="font-mono text-warm-white text-sm font-semibold">
-                    {record.handle}
-                  </div>
-                  <div className="text-xs text-warm-white/30 mt-0.5">
-                    {formatDate(record.created_at)} &middot; {record.tier}
-                  </div>
+              <div className="min-w-0 flex-1">
+                <div className="font-mono text-warm-white text-sm font-semibold truncate">
+                  {record.handle}
                 </div>
-                <div className="text-right">
-                  <div className="text-sm font-bold text-gold">{record.overall_score}</div>
-                  <div className={`text-xs font-semibold ${rank.color}`}>{rank.name}</div>
+                <div className="text-xs text-warm-white/30 mt-0.5">
+                  {formatDate(record.created_at)} · {record.tier}
                 </div>
               </div>
+              {score && (
+                <div className="text-right shrink-0">
+                  <div className={`text-sm font-bold ${getScoreColor(score)}`}>{score}</div>
+                </div>
+              )}
               <button
-                onClick={() => setViewing(record.audit_data)}
-                className="px-4 py-2 text-xs font-semibold text-teal border border-teal/30 rounded-lg hover:bg-teal/10 transition-colors"
+                onClick={() => setViewing(record.result)}
+                className="shrink-0 px-4 py-2 text-xs font-semibold text-teal border border-teal/30 rounded-lg hover:bg-teal/10 transition-colors"
               >
                 View →
               </button>
