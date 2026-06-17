@@ -13,21 +13,25 @@ export default function Nav() {
       <Link href="/" className="flex items-center gap-2.5">
         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" className="w-7 h-7 shrink-0">
           <rect width="512" height="512" rx="108" fill="#141418"/>
-          <line x1="72" y1="176" x2="440" y2="176" stroke="#ffffff" strokeWidth="1" opacity="0.06"/>
-          <line x1="72" y1="256" x2="440" y2="256" stroke="#ffffff" strokeWidth="1" opacity="0.06"/>
-          <line x1="72" y1="336" x2="440" y2="336" stroke="#ffffff" strokeWidth="1" opacity="0.06"/>
-          <line x1="72" y1="416" x2="440" y2="416" stroke="#ffffff" strokeWidth="1.5" opacity="0.12"/>
-          <rect x="88"  y="256" width="60" height="160" rx="10" fill="#3DBFBF" opacity="0.35"/>
-          <rect x="180" y="200" width="60" height="216" rx="10" fill="#3DBFBF" opacity="0.55"/>
-          <rect x="272" y="144" width="60" height="272" rx="10" fill="#3DBFBF" opacity="0.75"/>
-          <rect x="364" y="86"  width="60" height="330" rx="10" fill="#3DBFBF"/>
-          <line x1="72" y1="296" x2="440" y2="296" stroke="#E8604C" strokeWidth="3" strokeLinecap="round" opacity="0.85"/>
-          <circle cx="118" cy="296" r="8" fill="#E8604C"/>
-          <circle cx="210" cy="296" r="8" fill="#E8604C"/>
-          <circle cx="302" cy="296" r="8" fill="#E8604C"/>
-          <circle cx="394" cy="296" r="8" fill="#E8604C"/>
+          <defs>
+            <clipPath id="nav-lens">
+              <circle cx="205" cy="205" r="155"/>
+            </clipPath>
+          </defs>
+          <g clipPath="url(#nav-lens)">
+            <rect x="68"  y="270" width="50" height="100" rx="7" fill="#3DBFBF" opacity="0.35"/>
+            <rect x="132" y="220" width="50" height="150" rx="7" fill="#3DBFBF" opacity="0.55"/>
+            <rect x="196" y="165" width="50" height="205" rx="7" fill="#3DBFBF" opacity="0.75"/>
+            <rect x="260" y="110" width="50" height="260" rx="7" fill="#3DBFBF"/>
+            <polyline points="55,315 93,295 142,305 192,272 238,238 284,195 322,152 360,112" fill="none" stroke="#E8604C" strokeWidth="5.5" strokeLinecap="round" strokeLinejoin="round"/>
+            <circle cx="93"  cy="295" r="8" fill="#E8604C"/>
+            <circle cx="192" cy="272" r="8" fill="#E8604C"/>
+            <circle cx="284" cy="195" r="8" fill="#E8604C"/>
+          </g>
+          <circle cx="205" cy="205" r="155" fill="none" stroke="#3DBFBF" strokeWidth="16"/>
+          <line x1="326" y1="326" x2="448" y2="448" stroke="#E8604C" strokeWidth="26" strokeLinecap="round"/>
         </svg>
-        <span className="text-coral font-bold tracking-tight text-lg">BRAND AUDIT</span>
+        <span className="text-coral font-bold tracking-tight text-lg">Socialyze</span>
       </Link>
       <nav className="flex items-center gap-6">
 <Link href="/" className="text-warm-white/40 hover:text-warm-white text-sm transition-colors">
