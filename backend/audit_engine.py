@@ -1,5 +1,6 @@
 import json
 import os
+import re
 from datetime import date
 from pathlib import Path
 
@@ -250,6 +251,16 @@ All string values must be complete sentences or phrases — no empty strings.
 }}"""
 
 
+def _extract_json(text: str) -> str:
+    """Strip code fences and extract the outermost JSON object from Claude output."""
+    text = re.sub(r"```(?:json)?", "", text).strip()
+    start = text.find("{")
+    end = text.rfind("}")
+    if start != -1 and end != -1 and end > start:
+        return text[start:end + 1]
+    return text
+
+
 def _clean(obj):
     """Recursively replace any [OMITTED COMPONENT...] strings with '—'."""
     if isinstance(obj, str):
@@ -292,15 +303,7 @@ def run_audit(handle: str, tier: str, self_archetype: str, profile_data: dict | 
         messages=[{"role": "user", "content": user_message}],
     )
 
-    raw = response.content[0].text.strip()
-
-    # Strip accidental code fences if Claude wraps the JSON anyway
-    if raw.startswith("```"):
-        raw = raw.split("```")[1]
-        if raw.startswith("json"):
-            raw = raw[4:]
-        raw = raw.strip()
-
+    raw = _extract_json(response.content[0].text)
     data = _clean(json.loads(raw))
     return AuditData(**data)
 
@@ -333,14 +336,8 @@ def run_teaser_audit(handle: str, self_archetype: str) -> dict:
             system=load_skill(),
             messages=[{"role": "user", "content": prompt}],
         )
-        raw = resp.content[0].text.strip()
-        if raw.startswith("```"):
-            raw = raw.split("```")[1]
-            if raw.startswith("json"):
-                raw = raw[4:]
-            raw = raw.strip()
         try:
-            return json.loads(raw)
+            return json.loads(_extract_json(resp.content[0].text))
         except json.JSONDecodeError as e:
             last_err = e
     raise last_err
