@@ -56,14 +56,12 @@ async def stripe_webhook(request: Request):
     payload = await request.body()
     sig = request.headers.get("stripe-signature", "")
     secret = os.environ.get("STRIPE_WEBHOOK_SECRET", "")
-
-    if secret:
-        try:
-            event = stripe.Webhook.construct_event(payload, sig, secret)
-        except Exception as e:
-            raise HTTPException(status_code=400, detail=str(e))
-    else:
-        event = json.loads(payload)
+    if not secret:
+        raise HTTPException(status_code=500, detail="Webhook secret not configured")
+    try:
+        event = stripe.Webhook.construct_event(payload, sig, secret)
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
 
     if event["type"] == "checkout.session.completed":
         session = event["data"]["object"]

@@ -30,9 +30,12 @@ app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 app.include_router(stripe_router)
 
+_FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:3000")
+_ALLOWED_ORIGINS = [_FRONTEND_URL, "http://localhost:3000", "http://localhost:3001"]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=_ALLOWED_ORIGINS,
     allow_methods=["*"],
     allow_headers=["*"],
     expose_headers=["X-Credits-Remaining"],
@@ -162,7 +165,8 @@ def audit_preview(req: AuditRequest, user_id: str = Depends(get_user_id)):
 
 
 @app.post("/render")
-def render(data: AuditData):
+@limiter.limit("10/minute")
+def render(request: Request, data: AuditData):
     try:
         docx_buf = build_docx(data)
     except Exception as e:
@@ -179,7 +183,8 @@ def render(data: AuditData):
 
 
 @app.post("/render/pptx")
-def render_pptx(data: AuditData):
+@limiter.limit("10/minute")
+def render_pptx(request: Request, data: AuditData):
     try:
         pptx_buf = build_pptx(data)
     except Exception as e:
