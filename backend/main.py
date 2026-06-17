@@ -1,16 +1,19 @@
 import os
 import time
 
-from fastapi import FastAPI, HTTPException, Depends
+from fastapi import FastAPI, HTTPException, Depends, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, StreamingResponse
 from pydantic import BaseModel
+from slowapi import Limiter, _rate_limit_exceeded_handler
+from slowapi.util import get_remote_address
+from slowapi.errors import RateLimitExceeded
 
 from audit_engine import run_audit, suggest_competitors, run_teaser_audit
 from auth import get_user_id
 from db import get_or_create_balance, deduct_credit, save_audit
 from stripe_routes import router as stripe_router
-from instagram_fetcher import fetch_profile, _fetch_via_rapidapi_raw
+from instagram_fetcher import fetch_profile
 from models import AuditData, CompareData
 from renderers.docx_renderer import build_docx
 from renderers.pptx_renderer import build_pptx
@@ -20,7 +23,10 @@ def _is_admin(user_id: str) -> bool:
     raw = os.getenv("ADMIN_USER_IDS", "")
     return user_id in {uid.strip() for uid in raw.split(",") if uid.strip()}
 
+limiter = Limiter(key_func=get_remote_address)
 app = FastAPI(title="Brand Audit Engine", version="0.1.0")
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 app.include_router(stripe_router)
 
@@ -61,15 +67,6 @@ def health():
     return {"status": "ok"}
 
 
-@app.get("/debug/instagram/{handle}")
-def debug_instagram(handle: str):
-    """Returns raw RapidAPI response for debugging response structure."""
-    username = handle.lstrip("@").strip()
-    raw = _fetch_via_rapidapi_raw(username)
-    parsed = fetch_profile(handle)
-    return {"raw": raw, "parsed": parsed}
-
-
 @app.get("/stats/{handle}")
 def profile_stats(handle: str):
     data = fetch_profile(handle)
@@ -87,7 +84,8 @@ def credits_balance(user_id: str = Depends(get_user_id)):
 
 
 @app.post("/audit/teaser")
-def audit_teaser_endpoint(req: AuditRequest):
+@limiter.limit("10/minute")
+def audit_teaser_endpoint(request: Request, req: AuditRequest):
     try:
         result = run_teaser_audit(req.handle, req.self_archetype)
     except Exception as e:

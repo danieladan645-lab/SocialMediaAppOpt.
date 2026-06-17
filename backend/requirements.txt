@@ -9,3 +9,4 @@ instaloader==4.15.1
 PyJWT[crypto]
 supabase==2.10.0
 stripe==11.4.1
+slowapi==0.1.9
