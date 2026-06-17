@@ -1,4 +1,5 @@
 import os
+import re
 import time
 
 from fastapi import FastAPI, HTTPException, Depends, Request
@@ -70,9 +71,14 @@ def health():
     return {"status": "ok"}
 
 
+_HANDLE_RE = re.compile(r"^[a-zA-Z0-9][a-zA-Z0-9._]{0,28}[a-zA-Z0-9]$|^[a-zA-Z0-9]$")
+
+
 @app.get("/stats/{handle}")
 @limiter.limit("5/minute")
 def profile_stats(request: Request, handle: str):
+    if not _HANDLE_RE.match(handle):
+        raise HTTPException(status_code=400, detail="Invalid Instagram handle")
     data = fetch_profile(handle)
     if not data:
         raise HTTPException(status_code=404, detail="Profile not found or private")

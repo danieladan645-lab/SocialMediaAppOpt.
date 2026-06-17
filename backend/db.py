@@ -26,24 +26,17 @@ def get_or_create_balance(user_id: str) -> int:
 
 def deduct_credit(user_id: str) -> int:
     try:
-        result = _db().table("credits").select("balance").eq("user_id", user_id).single().execute()
-        current = result.data["balance"] if result.data else 0
-        new_bal = max(0, current - 1)
-        _db().table("credits").update({"balance": new_bal}).eq("user_id", user_id).execute()
-        return new_bal
+        result = _db().rpc("deduct_credit_atomic", {"p_user_id": user_id}).execute()
+        return result.data if isinstance(result.data, int) else 0
     except Exception:
         return 0
 
 
 def add_credits(user_id: str, amount: int) -> int:
     try:
-        result = _db().table("credits").select("balance").eq("user_id", user_id).single().execute()
-        current = result.data["balance"] if result.data else 0
-        new_bal = current + amount
-        _db().table("credits").update({"balance": new_bal}).eq("user_id", user_id).execute()
-        return new_bal
+        result = _db().rpc("add_credits_atomic", {"p_user_id": user_id, "p_amount": amount}).execute()
+        return result.data if isinstance(result.data, int) else amount
     except Exception:
-        _db().table("credits").insert({"user_id": user_id, "balance": amount}).execute()
         return amount
 
 

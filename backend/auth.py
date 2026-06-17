@@ -31,5 +31,5 @@ def get_user_id(authorization: Optional[str] = Header(None)) -> str:
         return user_id
     except HTTPException:
         raise
-    except Exception as e:
-        raise HTTPException(status_code=401, detail=f"Unauthorized: {e}")
+    except Exception:
+        raise HTTPException(status_code=401, detail="Unauthorized")
