@@ -68,7 +68,8 @@ def health():
 
 
 @app.get("/stats/{handle}")
-def profile_stats(handle: str):
+@limiter.limit("5/minute")
+def profile_stats(request: Request, handle: str):
     data = fetch_profile(handle)
     if not data:
         raise HTTPException(status_code=404, detail="Profile not found or private")
@@ -94,7 +95,8 @@ def audit_teaser_endpoint(request: Request, req: AuditRequest):
 
 
 @app.post("/audit/suggest-competitors")
-def suggest_competitors_endpoint(req: SuggestRequest):
+@limiter.limit("5/minute")
+def suggest_competitors_endpoint(request: Request, req: SuggestRequest):
     try:
         suggestions = suggest_competitors(req.handle, req.self_archetype, req.bio)
         return {"suggestions": suggestions}
@@ -193,26 +195,3 @@ def render_pptx(data: AuditData):
     )
 
 
-@app.post("/audit")
-def audit(req: AuditRequest):
-    try:
-        audit_data = run_audit(req.handle, req.tier, req.self_archetype)
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Audit failed: {e}")
-
-    try:
-        docx_buf = build_docx(audit_data)
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Render failed: {e}")
-
-    handle_clean = req.handle.lstrip("@").replace(" ", "_")
-    return StreamingResponse(
-        docx_buf,
-        media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-        headers={
-            "Content-Disposition": f'attachment; filename="{handle_clean}_audit.docx"',
-            "X-Data-Archetype": audit_data.data_archetype,
-            "X-Self-Archetype": audit_data.self_archetype,
-            "X-Overall-Score": audit_data.overall_score,
-        },
-    )
